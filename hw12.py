@@ -1,5 +1,6 @@
 from datetime import datetime
 from collections import UserDict
+import json
 
 class Field:
     def __init__(self, value):
@@ -85,6 +86,12 @@ class Record:
         phones = '; '.join(p.value for p in self._phones)
         return f"Contact name: {self._name.value}, phones: {phones}, birthday: {self._birthday.value if self._birthday else 'N/A'}"
 
+    def to_dict(self):
+        return {
+            "name": self._name.value,
+            "phones": [phone.value for phone in self._phones],
+            "birthday": self._birthday.value if self._birthday else None
+        }
 
 class AddressBook(UserDict):
     def add_record(self, record):
@@ -104,6 +111,26 @@ class AddressBook(UserDict):
         for i in range(0, len(records), N):
             yield records[i:i + N]
 
+    def save_to_file(self, filename):
+            with open(filename, "w") as file:
+                json.dump([record.to_dict() for record in self.data.values()], file)
+    
+    def load_from_file(self, filename):
+        with open(filename, "r") as file:
+            data = json.load(file)
+            for entry in data:
+                record = Record(entry["name"], entry["birthday"])
+                for phone in entry["phones"]:
+                    record.add_phone(phone)
+                self.add_record(record)
+
+    def search(self, query):
+        results = []
+        for record in self.data.values():
+            if query in record._name.value or any(query in p.value for p in record._phones):
+                results.append(record)
+        return results
+
 
 #To check:
 record = Record("John Doe", "1990-01-01")
@@ -115,6 +142,7 @@ print(record.days_to_birthday())
 address_book = AddressBook()
 address_book.add_record(record)
 found_record = address_book.find("John Doe")
+address_book.save_to_file('address_book.json')
 
 print(found_record)
 
@@ -123,3 +151,7 @@ address_book.delete("John Doe")
 for batch in address_book.iterator(5):
     for record in batch:
         print(record)
+
+results = address_book.search("John")
+for record in results:
+    print(record)
