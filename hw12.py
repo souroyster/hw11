@@ -2,6 +2,57 @@ from datetime import datetime
 from collections import UserDict
 import json
 
+def input_error(func):
+    def inner(*args, **kwargs):
+        try:
+            return func(*args, **kwargs)
+        except (KeyError, ValueError, IndexError):
+            return "Invalid input. Please try again."
+
+    return inner
+
+contacts = {}
+
+@input_error
+def add_contact(name, phone):
+    contacts[name] = phone
+    return f"Contact '{name}' with phone '{phone}' added."
+
+@input_error
+def change_phone(name, new_phone):
+    contacts[name] = new_phone
+    return f"Phone number for '{name}' updated to '{new_phone}'."
+
+@input_error
+def get_phone(name):
+    return f"The phone number for '{name}' is '{contacts[name]}'."
+    
+def show_all_contacts():
+    return "\n".join(f"{name}: {phone}" for name, phone in contacts.items())
+
+def main():
+    while True:
+        command = input("Enter a command: ").lower()
+
+        if command == 'hello':
+            print("How can I help you?")
+        elif command.startswith('add'):
+            _, name, phone = command.split()
+            print(add_contact(name, phone))
+        elif command.startswith('change'):
+            _, name, new_phone = command.split()
+            print(change_phone(name, new_phone))
+        elif command.startswith('phone'):
+            _, name = command.split()
+            print(get_phone(name))
+        elif command == 'show all':
+            print(show_all_contacts())
+        elif command in ['good bye', 'close']:
+            print("Good bye!")
+            break
+        else:
+            print("Invalid command. Please try again.")
+
 class Field:
     def __init__(self, value):
         self._value = value
@@ -87,12 +138,12 @@ class Record:
         return f"Contact name: {self._name.value}, phones: {phones}, birthday: {self._birthday.value if self._birthday else 'N/A'}"
 
     def to_dict(self):
-        return {
-            "name": self._name.value,
-            "phones": [phone.value for phone in self._phones],
-            "birthday": self._birthday.value if self._birthday else None
-        }
-
+            return {
+                "name": self._name.value,
+                "phones": [phone.value for phone in self._phones],
+                "birthday": self._birthday.value if self._birthday else None
+            }
+    
 class AddressBook(UserDict):
     def add_record(self, record):
         self.data[record._name.value] = record
@@ -112,9 +163,9 @@ class AddressBook(UserDict):
             yield records[i:i + N]
 
     def save_to_file(self, filename):
-            with open(filename, "w") as file:
-                json.dump([record.to_dict() for record in self.data.values()], file)
-    
+        with open(filename, "w") as file:
+            json.dump([record.to_dict() for record in self.data.values()], file)
+
     def load_from_file(self, filename):
         with open(filename, "r") as file:
             data = json.load(file)
@@ -131,27 +182,5 @@ class AddressBook(UserDict):
                 results.append(record)
         return results
 
-
-#To check:
-record = Record("John Doe", "1990-01-01")
-record.add_phone("1234567890")
-
-print(record)
-print(record.days_to_birthday())
-
-address_book = AddressBook()
-address_book.add_record(record)
-found_record = address_book.find("John Doe")
-address_book.save_to_file('address_book.json')
-
-print(found_record)
-
-address_book.delete("John Doe")
-
-for batch in address_book.iterator(5):
-    for record in batch:
-        print(record)
-
-results = address_book.search("John")
-for record in results:
-    print(record)
+if __name__ == "__main__":
+    main()
